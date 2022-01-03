@@ -1,0 +1,52 @@
+import "@cadl-lang/rest";
+import "@cadl-lang/msgraph";
+import "@cadl-lang/openapi3";
+
+@serviceTitle("Pet Store Service")
+@serviceVersion("2021-03-25")
+@produces("application/json", "image/png")
+@consumes("application/json")
+namespace petStore {
+
+    model category {
+      @id id: string;
+      displayName: string;
+    }
+
+    model tag {
+      displayName: string;
+    }
+
+    enum petStatus {
+        @value(0) available,
+        @value(1) pending,
+        @value(2) sold,
+        @value(3) unknownFutureValue,
+    }
+
+    model pet {
+        @id id: string;
+        @byRef category: category;
+        displayName: string;
+        photoUrls: string[];
+        tags: tag[];
+        status: petStatus;
+    }
+
+    @skip
+    @service
+    model petService {
+        pets: pet[];
+        bestPet: pet;
+        categories: category[];
+    }
+
+    @resource("/pets")
+    namespace pets {
+        @post op create(@body pet: pet): TCreatedResponse<pet>;
+        @skip @skipToken @top @get op listPets(testParam: int32): OkResponse<PagedList<pet>>;
+        @get op getPetById(@path petId: string): OkResponse<pet> | NotFoundResponse;
+        @delete op deletePetById(@path petId: string): NoContentResponse | NotFoundResponse;
+        @patch op updatePetById(@path petId: string): NoContentResponse | NotFoundResponse;
+    }
+}
