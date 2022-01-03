@@ -1,11 +1,11 @@
 import "@cadl-lang/rest";
-import "@cadl-lang/msgraph";
 import "@cadl-lang/openapi3";
+import "@cadl-lang/msgraph";
 
 @serviceTitle("Pet Store Service")
 @serviceVersion("2021-03-25")
-@produces("application/json", "image/png")
-@consumes("application/json")
+@Cadl.Rest.produces("application/json", "image/png")
+@Cadl.Rest.consumes("application/json")
 namespace petStore {
 
     model category {
@@ -33,15 +33,16 @@ namespace petStore {
         status: petStatus;
     }
 
-    @skip
     @service
     model petService {
         pets: pet[];
         bestPet: pet;
         categories: category[];
     }
+    using Cadl.Http;
+    using Cadl.MsGraph;
 
-    @resource("/pets")
+    @route("/pets")
     namespace pets {
         @post op create(@body pet: pet): TCreatedResponse<pet>;
         @skip @skipToken @top @get op listPets(testParam: int32): OkResponse<PagedList<pet>>;
