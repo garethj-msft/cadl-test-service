@@ -6,7 +6,25 @@ import "@cadl-lang/msgraph";
 @serviceVersion("2021-03-25")
 @Cadl.Rest.produces("application/json", "image/png")
 @Cadl.Rest.consumes("application/json")
-namespace petStore {
+namespace microsoft.graph.petStore {
+
+    @import("@workload-oneDrive") model identity {
+    }
+
+    @import model identitySet {
+        user: identity @workloadName("internalUser");
+        device: identity;
+        application: identity;
+    }
+
+    @partial model microsoft.graph.user {
+       @relation pets: pet[];
+    }
+
+    @external model microsoft.graph.group {
+    }
+
+
 
     model category {
       @id id: string;
@@ -18,19 +36,37 @@ namespace petStore {
     }
 
     enum petStatus {
-        @value(0) available,
+        @value(0) available, // Can we make this name @value()?
         @value(1) pending,
         @value(2) sold,
         @value(3) unknownFutureValue,
     }
 
-    model pet {
+    model outfit {
+        id: string;
+        displayName: string;
+        cutenessLevel: int32;
+    }
+
+
+// TODO List:
+// apponly/delegated
+// addressUrl/MSAaddressURL
+// some extension mechanism so we can have a fast lifecycle
+// Use the extern 'group' somewhere.
+
+
+
+
+    model pet { 
         @id id: string;
-        @byRef category: category;
         displayName: string;
         photoUrls: string[];
         tags: tag[];
         status: petStatus;
+        owner: identitySet;
+        @relation outfits: outfit[];
+        @refRelation category: category;
     }
 
     @service
@@ -43,11 +79,76 @@ namespace petStore {
     using Cadl.MsGraph;
 
     @route("/pets")
-    namespace pets {
-        @post op create(@body pet: pet): TCreatedResponse<pet>;
-        @skip @skipToken @top @get op listPets(testParam: int32): OkResponse<PagedList<pet>>;
-        @get op getPetById(@path petId: string): OkResponse<pet> | NotFoundResponse;
-        @delete op deletePetById(@path petId: string): NoContentResponse | NotFoundResponse;
-        @patch op updatePetById(@path petId: string): NoContentResponse | NotFoundResponse;
+    namespace pets
+    {
+        op create(body: pet): TCreatedResponse<pet>;
+        op list(testParam: int32): OkResponse<PagedList<pet>> @skip @top @expand(categories, outfits);
+        post op makeAllThePetsPoster(): OKResponse<stream>;
+    }
+
+    @route("/pets/{id}")
+    namespace petsById
+    {
+        op get(id: string): OkResponse<pet> | NotFoundResponse;
+        op delete(id: string): NoContentResponse | NotFoundResponse;
+        op update(id: string, changes: pet): NoContentResponse | NotFoundResponse;
+    }
+    
+    @route("/pets/{id}/sendCutePostcard")
+    {
+       @post op sendCutePostcard(id: string, greeting: string): NoContentResponse | NotFoundResponse;;
+    }
+
+    @route("/pets/{id}/outfits")
+    namespace petsByIdOutfits
+    {
+        op get(id: string): OkResponse<pet> | NotFoundResponse;
+        op delete(id: string): NoContentResponse | NotFoundResponse;
+    }
+
+    @route("/pets/{petId}/outfits/{outfitId}")
+    namespace petsByIdOutfitsById
+    {
+        op get(petId: string, outfitId: string): OkResponse<outfit> | NotFoundResponse;
+        op delete(petId: string, outfitId: string): NoContentResponse | NotFoundResponse;
+        op update(petId: string, outfitId: string, changes: outfit): NoContentResponse | NotFoundResponse;
+    }
+
+    @route("/pets/{id}/category")
+    namespace petsByIdCategory
+    {
+        op get(id: string): OkResponse<category> | NotFoundResponse;
+        op put(id: string, category: Ref<category>): NoContentResponse | NotFoundResponse;
+    }
+
+    @route("/pets/{id}/category/$ref")
+    namespace petsByIdCategoryRef
+    {
+        op get(id: string): OkResponse<Ref<category>> | NotFoundResponse;
+        op delete(id: string): NoContentResponse | NotFoundResponse;
+    }
+
+    
+    @route("/categories")
+    namespace categories {
+        op create(body: category): TCreatedResponse<category>;
+        op list(): OkResponse<List<category>>;
+    }
+
+    @route("/categories/{id}")
+    namespace categoriesById {
+        op get(id: string): OkResponse<category> | NotFoundResponse;
+        op delete(id: string): NoContentResponse | NotFoundResponse;
+        op update(id: string, changes: category): NoContentResponse | NotFoundResponse;
     }
 }
+
+
+
+1. parameter without @path (or any specifier) is in the path.
+2. $skipToken is implied by PagedList<T>
+3. HTTP methods are implied by the names: create, list, get, delete, update
+4. (Check flags like $skip and $top can be at the end)
+5. @select for all values is implied.
+6. Models with an property annotated with @id are addressable (map to csdl entities, otherwise complex types).
+7. Can we somehow combine namespace and @route - redundant at present - can we add new keywords?
