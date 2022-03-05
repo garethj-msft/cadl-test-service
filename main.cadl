@@ -1,3 +1,15 @@
+// TODO List:
+// addressUrl/MSAaddressURL
+// some extension mechanism so we can have a fast lifecycle
+// Bulk /deep write supported on individual
+// Filter
+// Property,Type and op documentation
+// lifecycle (implementation | experimental | privatePreview | publicPreview | releaseCandidate* | public | privileged | deprecated )
+// deprecation details.
+// serviceContainer
+//       bindingPaths
+
+
 import "@cadl-lang/rest";
 import "@cadl-lang/openapi3";
 import "@cadl-lang/msgraph";
@@ -8,27 +20,33 @@ import "@cadl-lang/msgraph";
 @Cadl.Rest.consumes("application/json")
 namespace microsoft.graph.petStore {
 
+    // Import type for reuse without modification
     @import("@workload-oneDrive") model identity {
     }
 
+    // Import type for reuse with mapping to internal names
     @import model identitySet {
         user: identity @workloadName("internalUser");
         device: identity;
         application: identity;
     }
 
+    // Add properties to existing types
     @partial model microsoft.graph.user {
        @relation pets: pet[];
     }
 
+    // Reference external type for extending
     @external model microsoft.graph.group {
     }
 
-
+    model kennelClub : microsoft.graph.group {
+    }
 
     model category {
-      @id id: string;
+      @id id: string @serverGenerated;
       displayName: string;
+      petCount: int32 @serverGenerated;
     }
 
     model tag {
@@ -43,27 +61,19 @@ namespace microsoft.graph.petStore {
     }
 
     model outfit {
-        id: string;
-        displayName: string;
+        @id id: string @serverGenerated;
+        displayName: string @required;
         cutenessLevel: int32;
     }
 
-
-// TODO List:
-// apponly/delegated
-// addressUrl/MSAaddressURL
-// some extension mechanism so we can have a fast lifecycle
-// Use the extern 'group' somewhere.
-
-
-
-
     model pet { 
-        @id id: string;
-        displayName: string;
+        @id id: string @serverGenerated;
+        displayName: string @required; 
         photoUrls: string[];
         tags: tag[];
+        breed: string @immutable;  // Can only be set on create
         status: petStatus;
+        password: string @writeOnly;  
         owner: identitySet;
         @relation outfits: outfit[];
         @refRelation category: category;
@@ -75,6 +85,7 @@ namespace microsoft.graph.petStore {
         bestPet: pet;
         categories: category[];
     }
+
     using Cadl.Http;
     using Cadl.MsGraph;
 
@@ -82,8 +93,9 @@ namespace microsoft.graph.petStore {
     namespace pets
     {
         op create(body: pet): TCreatedResponse<pet>;
-        op list(testParam: int32): OkResponse<PagedList<pet>> @skip @top @expand(categories, outfits);
-        post op makeAllThePetsPoster(): OKResponse<stream>;
+        op list(testParam: int32): OkResponse<PagedList<pet>> @skip @top @count @expand("categories", "outfits");
+        op patch(changes: pet[]): NoContentResponse;
+        @post op makeAllThePetsPoster(): OKResponse<stream>;
     }
 
     @route("/pets/{id}")
@@ -91,19 +103,19 @@ namespace microsoft.graph.petStore {
     {
         op get(id: string): OkResponse<pet> | NotFoundResponse;
         op delete(id: string): NoContentResponse | NotFoundResponse;
-        op update(id: string, changes: pet): NoContentResponse | NotFoundResponse;
+        op patch(id: string, change: pet): NoContentResponse | NotFoundResponse;
     }
     
     @route("/pets/{id}/sendCutePostcard")
     {
-       @post op sendCutePostcard(id: string, greeting: string): NoContentResponse | NotFoundResponse;;
+        @post op sendCutePostcard(id: string, greeting: string): NoContentResponse | NotFoundResponse;;
     }
 
     @route("/pets/{id}/outfits")
     namespace petsByIdOutfits
     {
-        op get(id: string): OkResponse<pet> | NotFoundResponse;
-        op delete(id: string): NoContentResponse | NotFoundResponse;
+        op post() : TCreatedResponse<outfit>;
+        op get(id: string): OkResponse<List<outfit> @orderBy("displayName");
     }
 
     @route("/pets/{petId}/outfits/{outfitId}")
@@ -111,7 +123,7 @@ namespace microsoft.graph.petStore {
     {
         op get(petId: string, outfitId: string): OkResponse<outfit> | NotFoundResponse;
         op delete(petId: string, outfitId: string): NoContentResponse | NotFoundResponse;
-        op update(petId: string, outfitId: string, changes: outfit): NoContentResponse | NotFoundResponse;
+        op patch(petId: string, outfitId: string, changes: outfit): NoContentResponse | NotFoundResponse;
     }
 
     @route("/pets/{id}/category")
@@ -127,12 +139,11 @@ namespace microsoft.graph.petStore {
         op get(id: string): OkResponse<Ref<category>> | NotFoundResponse;
         op delete(id: string): NoContentResponse | NotFoundResponse;
     }
-
     
     @route("/categories")
     namespace categories {
-        op create(body: category): TCreatedResponse<category>;
-        op list(): OkResponse<List<category>>;
+        op post(body: category): TCreatedResponse<category>;
+        op get(): OkResponse<List<category>>;
     }
 
     @route("/categories/{id}")
@@ -145,6 +156,9 @@ namespace microsoft.graph.petStore {
 
 
 
+Core principal:   
+Where API authors have a decision to make, we don't abstract it - make 'em think when they need to think.
+
 1. parameter without @path (or any specifier) is in the path.
 2. $skipToken is implied by PagedList<T>
 3. HTTP methods are implied by the names: create, list, get, delete, update
@@ -152,3 +166,4 @@ namespace microsoft.graph.petStore {
 5. @select for all values is implied.
 6. Models with an property annotated with @id are addressable (map to csdl entities, otherwise complex types).
 7. Can we somehow combine namespace and @route - redundant at present - can we add new keywords?
+8. @required and @serverGenerated create non-nullable properties. Otherwise the properties are optional and non-nullable.
