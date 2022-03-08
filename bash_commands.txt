@@ -1,0 +1,7 @@
+# bash commands to generate ags_attributes and ags_annotations file
+
+# Attributes - run at the top of the workloads folder in the workoads repo.
+# find . -wholename '*/override/*.csdl' -exec grep 'ags:' {} \; | sed 's|^[^:]*:|ags:|' | sed 's| */>||' | sed 's|">|"|' | sed 's| |\n|g' | grep 'ags:' | sort | uniq -u > /mnt/c/repos/service1/ags_attributes.txt
+
+# Annotations - run at the top of the workloads folder in the workoads repo.
+# find . -wholename '*/override/*.csdl' -exec xmlstarlet sel -B -I -N edm=http://docs.oasis-open.org/odata/ns/edm -t -m "//node()[edm:Annotation]" -c "." {} \; > /mnt/c/repos/service1/ags_annotations.txt 
