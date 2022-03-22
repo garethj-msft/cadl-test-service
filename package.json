@@ -10,8 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@cadl-lang/compiler": "file:../cadl/packages/compiler",
+    "@cadl-lang/rest": "file:../cadl/packages/rest",
     "@cadl-lang/msgraph": "file:../cadl/packages/msgraph",
-    "@cadl-lang/openapi3": "^0.5.0",
-    "@cadl-lang/rest": "^0.8.0"
+    "@cadl-lang/openapi3": "file:../cadl/packages/openapi3"
   }
 }

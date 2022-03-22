@@ -1,0 +1,18 @@
+
+namespace microsoft.graph.petStore {
+
+  
+
+}
+
+Core principal:   
+Where API authors have a decision to make, we don't abstract it - make 'em think when they need to think.
+
+1. parameter without @path (or any specifier) is in the path.
+2. $skipToken is implied by PagedList<T>
+3. HTTP methods are implied by the names: create, list, get, delete, update
+4. (Check flags like $skip and $top can be at the end)
+5. @select for all values is implied.
+6. Models with an property annotated with @id are addressable (map to csdl entities, otherwise complex types).
+7. Can we somehow combine namespace and @route - redundant at present - can we add new keywords?
+8. @required and @serverGenerated create non-nullable properties. Otherwise the properties are optional and non-nullable.
