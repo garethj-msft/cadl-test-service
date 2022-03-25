@@ -45,7 +45,7 @@ namespace microsoft.graph.petStore {
     }
 
     enum petStatus {
-        @value(0) available, // Can we make this name @value()?
+        @value(0) available,
         @value(1) pending,
         @value(2) sold,
         @value(3) unknownFutureValue,

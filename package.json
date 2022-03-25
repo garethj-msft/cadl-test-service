@@ -12,6 +12,7 @@
   "dependencies": {
     "@cadl-lang/compiler": "file:../cadl/packages/compiler",
     "@cadl-lang/rest": "file:../cadl/packages/rest",
+    "@cadl-lang/csdl": "file:../cadl/packages/csdl",
     "@cadl-lang/msgraph": "file:../cadl/packages/msgraph",
     "@cadl-lang/openapi3": "file:../cadl/packages/openapi3"
   }
