@@ -12,6 +12,7 @@
 import "@cadl-lang/compiler";
 import "@cadl-lang/rest";
 import "@cadl-lang/msgraph";
+import "@msgraph/oneDrive";
 
 using Cadl.Http;
 using Cadl.MsGraph;
@@ -62,12 +63,18 @@ namespace microsoft.graph.petStore {
         @required displayName: string; 
         photoUrls: string[];
         tags: tag[];
-        @immutable breed: string;  // Can only be set on create
+        @required @immutable breed: string;  // Can only be set on create
         status: petStatus;
         @writeOnly password: string; 
         owner: identitySet;
         @relation outfits: outfit[];
         @refRelation category: category;
+
+        @relation outfits: outfit[];
+        @refRelation category: category;
+        @pointerRelation category: category;
+        @pointerRelation @supportsRefs category2: category;
+
     }
 
     @service
@@ -75,8 +82,10 @@ namespace microsoft.graph.petStore {
         pets: pet[];
         bestPet: pet;
         categories: category[];
+        // TODO: Navigation bindings
     }
 
+// Alternative 1
     @route("/pets")
     interface pets
     {
@@ -89,15 +98,27 @@ namespace microsoft.graph.petStore {
     @route("/pets/{id}")
     interface petsById
     {
-        get(id: string): OkResponse<pet> | NotFoundResponse;
-        delete(id: string): NoContentResponse | NotFoundResponse;
+        get(id: string): GetByIdResponse<pet>;
+        // get(id: string): OkResponse<pet> | NotFoundResponse;
         patch(id: string, change: pet): NoContentResponse | NotFoundResponse;
+        delete(id: string): NoContentResponse | NotFoundResponse;
+        @action sendCutePostcard(id: string, greeting: string): NoContentResponse | NotFoundResponse;
     }
-    
-    @route("/pets/{id}/sendCutePostcard")
-    interface sendCutePostcard
+
+// Alternative2
+    @route("/pets2")
+    interface pets2
     {
-        @post sendCutePostcard(id: string, greeting: string): NoContentResponse | NotFoundResponse;
+        create(body: pet): TCreatedResponse<pet>;
+        @skip @top @count @expand("categories", "outfits") list(testParam: int32): OkResponse<PagedList<pet>>;
+        patch(changes: pet[]): NoContentResponse;
+        @function getAllThePetsPoster(binding: pets[]): OkResponse<stream>;
+        @route("/pets2/{id}")
+        get(id: string): OkResponse<pet> | NotFoundResponse;
+        @route("/pets2/{id}")
+        delete(id: string): NoContentResponse | NotFoundResponse;
+        @route("/pets2/{id}")
+        @patch patchById(id: string, change: pet): NoContentResponse | NotFoundResponse;
     }
 
     @route("/pets/{id}/outfits")
