@@ -12,24 +12,37 @@
 import "@cadl-lang/compiler";
 import "@cadl-lang/rest";
 import "@cadl-lang/msgraph";
-import "@msgraph/oneDrive";
+
+// We will need to have a pipeline thatr builds everyone's workloads into a cadl package and npm hosts them on azdo
+import "@msgraphbeta/oneDrive";
 
 using Cadl.Http;
 using Cadl.MsGraph;
-    
+using oneDrive; //using oneDrive.identitySet if CADL team do this.
+using sharedTypes;
+
 @serviceTitle("Pet Store Service")
 @serviceVersion("2021-03-25")
-namespace microsoft.graph.petStore {
+@publicNamespace("microsoft.graph")
+// We will lint out any namespaces containing "microsoft.graph"
+namespace petStore {
 
-    // Import type for reuse without modification
-    @importModel("@workload-oneDrive") model identity {
+    // Import type for reuse as-is.
+    // Could also use a fine-grained using if that becomes available.
+    @shared model identity {
     }
 
     // Import type for reuse with mapping to internal names
-    @importModel model identitySet {
+    // @shared means copy the fields that are unspecified from the base type and do not allow any other firelds to be added.
+    @shared model identitySet {
         @workloadName("internalUser") user: identity ;
-        device: identity;
-        application: identity;
+        // The other fields are implicit
+        // device: identity;
+        // application: identity;
+    }
+
+    model myIdentitySet extends identitySet {
+        phone: identity;
     }
 
     model kennelClub extends microsoft.graph.group {
@@ -67,13 +80,16 @@ namespace microsoft.graph.petStore {
         status: petStatus;
         @writeOnly password: string; 
         owner: identitySet;
-        @relation outfits: outfit[];
-        @refRelation category: category;
+        @contains outfits: outfit[];
 
-        @relation outfits: outfit[];
-        @refRelation category: category;
-        @pointerRelation category: category;
-        @pointerRelation @supportsRefs category2: category;
+        // Non-contained nav property
+        @references category: category;
+
+        // contains maps to a contained Nav Property
+        @contains outfits: outfit[];
+
+        // experimental idea about cross-workload 
+        @producerReference("oneDrive.driveItem") photoAlbumId: string;
 
     }
 
@@ -106,6 +122,7 @@ namespace microsoft.graph.petStore {
     }
 
 // Alternative2
+// This is not the one we are proposing shoudl be the basis for education although the language will support both without extra effort.
     @route("/pets2")
     interface pets2
     {
@@ -140,13 +157,13 @@ namespace microsoft.graph.petStore {
     interface petsByIdCategory
     {
         get(id: string): OkResponse<category> | NotFoundResponse;
-        put(id: string, category: Ref<category>): NoContentResponse | NotFoundResponse;
     }
 
     @route("/pets/{id}/category/$ref")
     interface petsByIdCategoryRef
     {
         get(id: string): OkResponse<Ref<category>> | NotFoundResponse;
+        put(id: string, body: Ref<category>): NoContentResponse | NotFoundResponse;
         delete(id: string): NoContentResponse | NotFoundResponse;
     }
     
@@ -162,16 +179,10 @@ namespace microsoft.graph.petStore {
         delete(id: string): NoContentResponse | NotFoundResponse;
         update(id: string, changes: category): NoContentResponse | NotFoundResponse;
     }
-}
-
-namespace microsoft.graph {
 
     // Add properties to existing types
+    // Note if this was in microsoft.graph originally, but we are in microsoft.graph.petStore, then the CSDL emnitter must fork the namespace.
     @partial model user {
-        @relation pets: microsoft.graph.petStore.pet[];
-    }
-
-    // Reference external type for extending
-    @external model group {
+        @contains pets: microsoft.graph.petStore.pet[];
     }
 }
