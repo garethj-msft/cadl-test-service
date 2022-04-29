@@ -13,8 +13,23 @@ import "@cadl-lang/compiler";
 import "@cadl-lang/rest";
 import "@cadl-lang/msgraph";
 
+/* ---- New thoughts this week
+
+1. CADL files are bigger than you expect
+
+2. Today in CSDL we have the 'ags:Hidden' annotation reused for multiple
+semantically separate conepts:
+1. Privileged APIs (Permanently 1P only)
+2. APIs in private preview
+3. APIs that are approved but not yet implemented
+*/
+
+
 // We will need to have a pipeline thatr builds everyone's workloads into a cadl package and npm hosts them on azdo
-import "@msgraphbeta/oneDrive";
+import {
+     identity,
+     identitySet 
+     } from "@msgraphbeta/oneDrive";
 
 using Cadl.Http;
 using Cadl.MsGraph;
@@ -103,8 +118,7 @@ namespace petStore {
 
 // Alternative 1
     @route("/pets")
-    interface pets
-    {
+    interface pets {
         create(body: pet): TCreatedResponse<pet>;
         @skip @top @count @expand("categories", "outfits") list(testParam: int32): OkResponse<PagedList<pet>>;
         patch(changes: pet[]): NoContentResponse;
@@ -112,8 +126,7 @@ namespace petStore {
     }
 
     @route("/pets/{id}")
-    interface petsById
-    {
+    interface petsById {
         get(id: string): GetByIdResponse<pet>;
         // get(id: string): OkResponse<pet> | NotFoundResponse;
         patch(id: string, change: pet): NoContentResponse | NotFoundResponse;
@@ -122,10 +135,10 @@ namespace petStore {
     }
 
 // Alternative2
-// This is not the one we are proposing shoudl be the basis for education although the language will support both without extra effort.
+// This is not the one we are proposing be the basis for how the language is documented
+//  although the language should support both without extra effort.
     @route("/pets2")
-    interface pets2
-    {
+    interface pets2 {
         create(body: pet): TCreatedResponse<pet>;
         @skip @top @count @expand("categories", "outfits") list(testParam: int32): OkResponse<PagedList<pet>>;
         patch(changes: pet[]): NoContentResponse;
@@ -139,29 +152,25 @@ namespace petStore {
     }
 
     @route("/pets/{id}/outfits")
-    interface petsByIdOutfits
-    {
+    interface petsByIdOutfits {
         post() : TCreatedResponse<outfit>;
         @orderBy("displayName") get(id: string): OkResponse<List<outfit>>;
     }
 
     @route("/pets/{petId}/outfits/{outfitId}")
-    interface petsByIdOutfitsById
-    {
+    interface petsByIdOutfitsById {
         get(petId: string, outfitId: string): OkResponse<outfit> | NotFoundResponse;
         delete(petId: string, outfitId: string): NoContentResponse | NotFoundResponse;
         patch(petId: string, outfitId: string, changes: outfit): NoContentResponse | NotFoundResponse;
     }
 
     @route("/pets/{id}/category")
-    interface petsByIdCategory
-    {
+    interface petsByIdCategory {
         get(id: string): OkResponse<category> | NotFoundResponse;
     }
 
     @route("/pets/{id}/category/$ref")
-    interface petsByIdCategoryRef
-    {
+    interface petsByIdCategoryRef {
         get(id: string): OkResponse<Ref<category>> | NotFoundResponse;
         put(id: string, body: Ref<category>): NoContentResponse | NotFoundResponse;
         delete(id: string): NoContentResponse | NotFoundResponse;
